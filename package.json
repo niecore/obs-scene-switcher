@@ -1,0 +1,12 @@
+{
+  "name": "obs-scene-switcher",
+  "version": "0.0.0",
+  "main": "server.js",
+  "author": "niecore",
+  "dependencies": {
+    "body-parser": "~1.5.2",
+    "express": "~4.7.2",
+    "obs-websocket-js": "^1.1.0",
+    "websocket-client": "^1.0.0"
+  }
+}
