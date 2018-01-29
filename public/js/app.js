@@ -1,9 +1,24 @@
-angular.module("app", ['dndLists']).controller("SimpleDemoController", function ($scope, $http) {
+angular.module("app", ['dndLists', 'rzModule']).controller("SimpleDemoController", function ($scope, $http) {
 
     $scope.models = {
         selected: [],
         lists: { "available": [], "active": []}
     };
+
+    $scope.slider = {
+      value: 60,
+      options: {
+        floor: 30,
+        ceil: 90,
+        onEnd: function(sliderId, modelValue, highValue, pointerType) {
+           $http.put("/api/interval", { 'interval': modelValue * 1000 }).success(function(result) {
+                // no action
+           }).error(function() {
+               console.log("Put Interval Error");
+           });
+        }
+      }
+    }    
 
 
     $http.get("/api/available")
@@ -23,11 +38,19 @@ angular.module("app", ['dndLists']).controller("SimpleDemoController", function 
         })
         .error(function(data) {
             console.log('Error: ' + data);
-    });        
+    });
  
+    $http.get("/api/interval")
+        .success(function(data) {
+            $scope.slider. value = data / 1000;
+            console.log(data);
+        })
+        .error(function(data) {
+            console.log('Error: ' + data);
+    }); 
+
 
     $scope.toggle = function(list, item) {
-
        var retval = true;
        $http.put("/api/toggle", { 'toggle': item }).success(function(result) {
            console.log(result);
@@ -39,10 +62,4 @@ angular.module("app", ['dndLists']).controller("SimpleDemoController", function 
         // Return false here to cancel drop. Return true if you insert the item yourself.
         return retval;
     };
-
-    // Model to JSON for demo purpose
-    $scope.$watch('models', function (model) {
-        $scope.modelAsJson = angular.toJson(model, true);
-    }, true);
-
 });

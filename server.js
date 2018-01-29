@@ -7,9 +7,7 @@ var sys = require('sys');
 const OBSWebSocket = require('obs-websocket-js');
 const obs = new OBSWebSocket();
 
-obs.connect({ address: '127.0.0.1:4444'});
-
-
+connectToObs();
 
 // configure app to use bodyParser()
 // this will let us get the data from a POST
@@ -24,9 +22,13 @@ var router = express.Router();              // get an instance of the express Ro
 
 var availableScenes = [];
 var activeRotation = [];
-var interval = 1500;
+var interval = 60000;
+var reconnectInterval = 5000;
 var timerObj;
+var reconnectTimer;
 var index = 0;
+var connected = false;
+var obsIp = '127.0.0.1:4444'
 
 router.put('/interval', function (req, res) {
 	if(!isNaN(req.body.interval))
@@ -35,6 +37,8 @@ router.put('/interval', function (req, res) {
 
 		clearInterval(timerObj);
 		timerObj = setInterval(updateScene, interval);
+
+		console.log("Interval set to " + interval)
 
 	  	res.status(204).end();
 	}
@@ -99,6 +103,10 @@ router.get('/reload', function(req, res) {
   res.status(200).end();
 });
 
+router.get('/connectionStatus', function(req, res) {
+    res.json({connected: connected});
+});
+
 // more routes for our API will happen here
 
 // REGISTER OUR ROUTES -------------------------------
@@ -111,14 +119,37 @@ app.use('/api', router);
 app.listen(port);
 console.log('OBS Rotator started on: ' + port);
 
+// You must add this handler to avoid uncaught exceptions.
+obs.on('error', err => {
+	console.error('socket error:', err);
+});
 
 obs.onConnectionOpened(() => {
+	clearInterval(reconnectTimer);
+
+
 	console.log('OBS Connection Opened');
+	connected = true;
 	reloadScene();
 
 	timerObj = setInterval(updateScene, interval);
 });
 
+obs.onConnectionClosed(() => {
+	console.log('OBS Connection Close');
+	connected = false;
+	// start reconnect timer
+
+	setTimeout(connectToObs, 1500, 'funky');
+	//reconnectTimer = setInterval(connectToObs, reconnectInterval);
+});
+
+function connectToObs() {
+	obs.connect({ address: obsIp})
+		.catch(err => { // Promise convention dicates you have a catch on every chain.
+			console.log(err);
+	});			
+}  
 
 function updateScene() {  
   if(index >= activeRotation.length)
