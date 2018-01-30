@@ -1,6 +1,8 @@
 angular.module("app", ['dndLists', 'rzModule']).controller("SimpleDemoController", function ($scope, $http) {
 
     $scope.models = {
+        connectedToObs: false,
+        conntectedToTwitch: false,
         selected: [],
         lists: { "available": [], "active": []}
     };
@@ -18,9 +20,10 @@ angular.module("app", ['dndLists', 'rzModule']).controller("SimpleDemoController
            });
         }
       }
-    }    
+    }   
 
-
+  // Function to get the data
+  $scope.getData = function(){
     $http.get("/api/available")
         .success(function(data) {
             $scope.models.lists.available = data;
@@ -29,7 +32,6 @@ angular.module("app", ['dndLists', 'rzModule']).controller("SimpleDemoController
         .error(function(data) {
             console.log('Error: ' + data);
     });
-
 
     $http.get("/api/active")
         .success(function(data) {
@@ -47,7 +49,29 @@ angular.module("app", ['dndLists', 'rzModule']).controller("SimpleDemoController
         })
         .error(function(data) {
             console.log('Error: ' + data);
-    }); 
+    });
+
+    $http.get("/api/connectionStatus")
+        .success(function(data) {
+            $scope.models.connectedToObs = data.connectedToObs;
+            $scope.models.conntectedToTwitch = data.conntectedToTwitch;
+            console.log(data);
+        })
+        .error(function(data) {
+            console.log('Error: ' + data);
+    });         
+  };
+
+  $scope.getData();
+
+  // Run function every second
+  setInterval($scope.getData, 1000);     
+
+    // Model to JSON for demo purpose
+    $scope.$watch('models', function(model) {
+        $scope.modelAsJson = angular.toJson(model, true);
+    }, true);
+
 
 
     $scope.toggle = function(list, item) {

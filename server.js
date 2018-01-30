@@ -29,6 +29,7 @@ var timerObj;
 var reconnectTimer;
 var index = 0;
 var connected = false;
+var live = false;
 
 const defaultTransition = 'default'
 
@@ -106,7 +107,7 @@ router.get('/reload', function(req, res) {
 });
 
 router.get('/connectionStatus', function(req, res) {
-	res.json({connected: connected});
+	res.json({connectedToObs: connected, conntectedToTwitch: live});
 });
 
 // more routes for our API will happen here
@@ -142,8 +143,18 @@ obs.onConnectionClosed(() => {
 	setTimeout(connectToObs, 1500);
 });
 
+obs.onStreamStarted(() => {
+	console.log('OBS is live');
+	live = true;
+});
+
+obs.onStreamStopped(() => {
+	console.log('OBS is not live anymore');
+	live = false;
+});
+
 function connectToObs() {
-	obs.connect({ address: obsIp})
+	obs.connect({ address: '127.0.0.1:4444'})
 		.catch(err => { // Promise convention dicates you have a catch on every chain.
 			console.log(err);
 	});			

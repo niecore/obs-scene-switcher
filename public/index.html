@@ -18,6 +18,24 @@
 <body ng-app="app">
     <div ng-controller="SimpleDemoController">
 
+
+        <div ng-show='!models.conntectedToTwitch' class="alert alert-warning" role="alert">
+            Controlling OBS instance is currently not streaming.
+        </div>
+
+        <div ng-show='models.conntectedToTwitch' class="alert alert-success" role="alert">
+            Controlling OBS instance is currently streaming.
+        </div>             
+
+
+        <div ng-show='!models.connectedToObs' class="alert alert-alert" role="alert">
+            Service is not connected to controlling OBS instance.
+        </div>
+
+        <div ng-show='models.connectedToObs' class="alert alert-success" role="alert">
+            Service is conncted to controlling OBS instance.
+        </div>                  
+
         <div>
             <rzslider
                 rz-slider-model="slider.value"
@@ -41,6 +59,10 @@
 
             </div>
         </div>
+
+
+            <h2>Generated Model</h2>
+    <pre>{{modelAsJson}}</pre>
     </div>
 
 </body>
