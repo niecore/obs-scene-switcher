@@ -22,13 +22,15 @@ var router = express.Router();              // get an instance of the express Ro
 
 var availableScenes = [];
 var activeRotation = [];
-var interval = 60000;
+var transitionList = [];
+var interval = 3000;
 var reconnectInterval = 5000;
 var timerObj;
 var reconnectTimer;
 var index = 0;
 var connected = false;
-var obsIp = '127.0.0.1:4444'
+
+const defaultTransition = 'default'
 
 router.put('/interval', function (req, res) {
 	if(!isNaN(req.body.interval))
@@ -40,7 +42,7 @@ router.put('/interval', function (req, res) {
 
 		console.log("Interval set to " + interval)
 
-	  	res.status(204).end();
+		res.status(204).end();
 	}
 	else
 	{
@@ -56,29 +58,29 @@ router.put('/toggle', function (req, res) {
 
 	console.log(element);
 	availableScenes.forEach(function(scene){
-	  	if(scene === element)
-	  	{
-	  		var index = availableScenes.indexOf(scene);
-	  		availableScenes.splice(index, 1);
-	  		activeRotation.push(element);
+		if(scene === element)
+		{
+			var index = availableScenes.indexOf(scene);
+			availableScenes.splice(index, 1);
+			activeRotation.push(element);
 
 			found = true;
-	  		res.status(200).end();
+			res.status(200).end();
 
-	  	}
+		}
 	});
 
 	if(!found){
 		activeRotation.forEach(function(scene){
-		  	if(scene === element)
-		  	{
-		  		var index = activeRotation.indexOf(scene);
-		  		activeRotation.splice(index, 1);
-		  		availableScenes.push(element);
+			if(scene === element)
+			{
+				var index = activeRotation.indexOf(scene);
+				activeRotation.splice(index, 1);
+				availableScenes.push(element);
 
-		  		res.status(204).end();
-		  		return;
-		  	}
+				res.status(204).end();
+				return;
+			}
 		});	
 	}
 
@@ -87,24 +89,24 @@ router.put('/toggle', function (req, res) {
 });
 
 router.get('/interval', function(req, res) {             
-    res.json(interval);
+	res.json(interval);
 });
 
 router.get('/active', function(req, res) {             
-    res.json(activeRotation);
+	res.json(activeRotation);
 });
 
 router.get('/available', function(req, res) {             
-    res.json(availableScenes);
+	res.json(availableScenes);
 });
 
 router.get('/reload', function(req, res) {             
-  reloadScene();
-  res.status(200).end();
+	reloadScene();
+	res.status(200).end();
 });
 
 router.get('/connectionStatus', function(req, res) {
-    res.json({connected: connected});
+	res.json({connected: connected});
 });
 
 // more routes for our API will happen here
@@ -126,12 +128,10 @@ obs.on('error', err => {
 
 obs.onConnectionOpened(() => {
 	clearInterval(reconnectTimer);
-
-
 	console.log('OBS Connection Opened');
 	connected = true;
 	reloadScene();
-
+	reloadTransitions();
 	timerObj = setInterval(updateScene, interval);
 });
 
@@ -139,9 +139,7 @@ obs.onConnectionClosed(() => {
 	console.log('OBS Connection Close');
 	connected = false;
 	// start reconnect timer
-
-	setTimeout(connectToObs, 1500, 'funky');
-	//reconnectTimer = setInterval(connectToObs, reconnectInterval);
+	setTimeout(connectToObs, 1500);
 });
 
 function connectToObs() {
@@ -152,31 +150,49 @@ function connectToObs() {
 }  
 
 function updateScene() {  
-  if(index >= activeRotation.length)
-  	index = 0;
+	if(index >= activeRotation.length)
+		index = 0;
 
-  if(0 == activeRotation.length)
-  {
-  	console.log("No Scenes in active pool");
-  	return;
-  }
-  obs.setCurrentScene({'scene-name': activeRotation[index]}, (err, data) => {
-  	console.log('Set Scene ' + activeRotation[index]);
+	if(0 == activeRotation.length)
+	{
+		console.log("No Scenes in active pool");
+		return;
+	}
 
-  	index++;
-  });
+	const newSceneName = activeRotation[index];
+	var transitionName = defaultTransition;
+	if(0 <= transitionList.indexOf(newSceneName))
+	{
+		transitionName = newSceneName;
+	}
+
+	// First Set Transition
+	obs.setCurrentTransition({'transition-name': transitionName}, (err, data) => {
+		// Switch Scene with new transition
+		obs.setCurrentScene({'scene-name': newSceneName}, (err, data) => {
+			console.log('Set Scene ' + newSceneName);
+			index++;
+		});
+	});
 }
 
 function reloadScene() {
-// Send some requests.
-  obs.getSceneList({}, (err, data) => {
-	//var obj = JSON.parse(data);
-	availableScenes = [];
-	activeRotation = [];
-	data.scenes.forEach(function(scene){
-	  	activeRotation.push(scene.name);
-	});
-  });
+	// Send some requests.
+	obs.getSceneList({}, (err, data) => {
+		//var obj = JSON.parse(data);
+		availableScenes = [];
+		activeRotation = [];
 
-  return;
+		activeRotation = data.scenes.map(scene => scene.name);
+	});
+	return;
+}
+
+function reloadTransitions() {
+	// Send some requests.
+	obs.getTransitionList({}, (err, data) => {
+		transitionList = data.transitions.map(transition => transition.name);
+	});
+
+	return;
 }
